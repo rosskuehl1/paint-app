@@ -6,7 +6,23 @@
 
 ## 🚀 Live Demo
 
-[View the app on GitHub Pages](https://rosskuehl1.github.io/paint-app/)
+Interact with the hosted build directly below (GitHub strips iframes in the web UI, so use the link if you do not see the embedded preview).
+
+<iframe
+	src="https://rosskuehl1.github.io/paint-app/"
+	title="Paint App Live Preview"
+	width="100%"
+	height="600"
+	style="border: 1px solid #d0d7de; border-radius: 6px;"
+	loading="lazy"
+>
+	<p>
+		Your browser does not support embedded previews. View the app on GitHub Pages:
+		<a href="https://rosskuehl1.github.io/paint-app/" target="_blank" rel="noreferrer">Paint App Live Demo</a>.
+	</p>
+</iframe>
+
+[Open the app in a new tab](https://rosskuehl1.github.io/paint-app/)
 
 ## ✨ Features
 
