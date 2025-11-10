@@ -25,13 +25,24 @@
 }
 
 .toolButton {
-  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
   border: 2px solid #ccc;
   border-radius: 4px;
   background-color: white;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   transition: all 0.2s;
+}
+
+.toolButton svg {
+  flex-shrink: 0;
+}
+
+.toolLabel {
+  font-size: 13px;
 }
 
 .toolButton:hover {
@@ -71,8 +82,27 @@
   cursor: pointer;
 }
 
+.canvasContainer {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
 .canvas {
   display: block;
   cursor: crosshair;
-  flex: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.overlayCanvas {
+  display: block;
+  cursor: crosshair;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: auto;
 }
