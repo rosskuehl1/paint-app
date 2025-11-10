@@ -1,4 +1,5 @@
 import styles from './payment-cancel.module.css';
+import { buildAppPath } from '../config/app-paths';
 
 /**
  * Payment Cancel Page
@@ -18,7 +19,7 @@ export function PaymentCancel() {
         </p>
         <button
           className={styles.button}
-          onClick={() => (window.location.href = '/')}
+          onClick={() => (window.location.href = buildAppPath())}
         >
           Return to PaintApp
         </button>

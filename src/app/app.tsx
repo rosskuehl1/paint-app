@@ -2,10 +2,13 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { paypalClient } from './services/paypal.client';
 import { useTipJar } from './hooks/useTipJar';
 import styles from './app.module.css';
+import { buildAppPath } from './config/app-paths';
+import { getCashAppConfig } from './config/cashapp.config';
 
 type Tool = 'pencil' | 'brush' | 'eraser' | 'rectangle' | 'oval';
 
 const presetTipOptions = [3, 5, 10, 25];
+const cashAppConfig = getCashAppConfig();
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -798,7 +801,7 @@ export function App() {
         <div className={styles.toolGroup}>
           <button
             className={`${styles.toolButton} ${styles.doomButton}`}
-            onClick={() => window.open('/doom.html', '_blank', 'noopener,noreferrer')}
+            onClick={() => window.open(buildAppPath('doom.html'), '_blank', 'noopener,noreferrer')}
             title="Launch DOOM in a new tab"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -966,9 +969,20 @@ export function App() {
                   ? 'You will be redirected to PayPal to complete your payment securely.'
                   : 'Tips are simulated—complete the support on your favorite payment platform.'}
               </p>
-              <p className={styles.tipAltNotice}>
-                Prefer Cash App? Send a tip to <span className={styles.tipAltHighlight}>$RossKuehl</span>.
-              </p>
+              {cashAppConfig.cashtag && (
+                <p className={styles.tipAltNotice}>
+                  Prefer Cash App? Send a tip to{' '}
+                  <a
+                    className={styles.tipAltHighlight}
+                    href={cashAppConfig.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {cashAppConfig.cashtag}
+                  </a>
+                  .
+                </p>
+              )}
             </form>
           </div>
         </div>

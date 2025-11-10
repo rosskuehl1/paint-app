@@ -61,7 +61,12 @@ PaintApp includes integrated PayPal support for accepting tips. To enable PayPal
      VITE_PAYPAL_CLIENT_ID=your_client_id_here
      VITE_PAYPAL_CLIENT_SECRET=your_client_secret_here
      VITE_PAYPAL_MODE=sandbox  # Use 'production' for live payments
+       VITE_PAYPAL_RECIPIENT_EMAIL=your_paypal_email@example.com
      ```
+    - (Optional) Surface a Cash App link alongside PayPal by setting:
+       ```env
+       VITE_CASHAPP_HANDLE=YourCashTagWithoutDollar
+       ```
 
 4. **Security Best Practice**
    - ⚠️ **Never commit `.env.local` to version control**
@@ -96,9 +101,9 @@ Issues and pull requests are welcome! If you plan to tackle a larger feature, pl
 3. Run `npx nx format:write` and `npx nx test paint-app`.
 4. Open a pull request describing your changes.
 
-## � Funding
+## 💸 Funding
 
-If you find PaintApp helpful, consider supporting ongoing development on [PayPal](https://paypal.me/rosskuehl).
+If you find PaintApp helpful, consider supporting ongoing development on [PayPal](https://paypal.me/rosskuehl) or directly via Cash App at [`$RossKuehl`](https://cash.app/$RossKuehl).
 
 ## �📄 License
 

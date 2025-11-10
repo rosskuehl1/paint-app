@@ -9,6 +9,7 @@ import {
   CaptureOrderResponse,
   PayPalError,
 } from './paypal.types';
+import { buildAppUrl } from '../config/app-paths';
 
 /**
  * PayPal Service
@@ -95,8 +96,8 @@ export class PayPalService {
           brand_name: 'PaintApp',
           landing_page: 'NO_PREFERENCE',
           user_action: 'PAY_NOW',
-          return_url: `${window.location.origin}/payment/success`,
-          cancel_url: `${window.location.origin}/payment/cancel`,
+          return_url: buildAppUrl('payment/success'),
+          cancel_url: buildAppUrl('payment/cancel'),
         },
       };
 

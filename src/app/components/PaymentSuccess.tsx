@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { paypalClient } from '../services/paypal.client';
+import { buildAppPath } from '../config/app-paths';
 import styles from './payment-success.module.css';
 
 /**
@@ -9,6 +10,10 @@ import styles from './payment-success.module.css';
 export function PaymentSuccess() {
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [message, setMessage] = useState('Processing your payment...');
+
+  useEffect(() => {
+    paypalClient.initialize();
+  }, []);
 
   useEffect(() => {
     const captureOrder = async () => {
@@ -23,6 +28,12 @@ export function PaymentSuccess() {
           return;
         }
 
+        if (!paypalClient.isAvailable()) {
+          setStatus('error');
+          setMessage('Payments are not configured right now.');
+          return;
+        }
+
         // Capture the order
         const result = await paypalClient.captureTipOrder(orderId);
 
@@ -32,7 +43,7 @@ export function PaymentSuccess() {
 
           // Redirect back to app after 3 seconds
           setTimeout(() => {
-            window.location.href = '/';
+            window.location.href = buildAppPath();
           }, 3000);
         } else {
           setStatus('error');
@@ -75,7 +86,7 @@ export function PaymentSuccess() {
             <p className={styles.subtitle}>No charges have been made.</p>
             <button
               className={styles.button}
-              onClick={() => (window.location.href = '/')}
+              onClick={() => (window.location.href = buildAppPath())}
             >
               Return to PaintApp
             </button>

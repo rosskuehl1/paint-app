@@ -27,6 +27,8 @@
 VITE_PAYPAL_CLIENT_ID=your_client_id
 VITE_PAYPAL_CLIENT_SECRET=your_secret
 VITE_PAYPAL_MODE=sandbox  # or 'production'
+VITE_PAYPAL_RECIPIENT_EMAIL=your_paypal_email@example.com
+VITE_CASHAPP_HANDLE=YourCashTagWithoutDollar  # optional Cash App link
 ```
 
 ## Code Examples

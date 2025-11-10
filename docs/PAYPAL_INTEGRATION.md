@@ -68,6 +68,9 @@ Create `.env.local` in the project root:
 VITE_PAYPAL_CLIENT_ID=your_client_id_here
 VITE_PAYPAL_CLIENT_SECRET=your_secret_here
 VITE_PAYPAL_MODE=sandbox
+VITE_PAYPAL_RECIPIENT_EMAIL=your_paypal_email@example.com
+# Optional: surface a Cash App link alongside PayPal
+VITE_CASHAPP_HANDLE=YourCashTagWithoutDollar
 ```
 
 **Important**: Never commit `.env.local` to version control!
@@ -99,6 +102,8 @@ When ready for production:
    VITE_PAYPAL_CLIENT_ID=your_production_client_id
    VITE_PAYPAL_CLIENT_SECRET=your_production_secret
    VITE_PAYPAL_MODE=production
+  VITE_PAYPAL_RECIPIENT_EMAIL=your_paypal_email@example.com
+  VITE_CASHAPP_HANDLE=YourCashTagWithoutDollar
    ```
 
 2. ⚠️ **Security Note**: For production, consider moving secrets to a backend service (see [PAYPAL_SECURITY.md](./PAYPAL_SECURITY.md))

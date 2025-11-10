@@ -1,7 +1,18 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { vi } from 'vitest';
 
 import App from './app';
+
+beforeAll(() => {
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    value: vi.fn(() => null),
+  });
+
+  Object.defineProperty(HTMLCanvasElement.prototype, 'toDataURL', {
+    value: vi.fn(() => 'data:image/png;base64,'),
+  });
+});
 
 describe('App', () => {
   it('should render successfully', () => {
@@ -13,14 +24,15 @@ describe('App', () => {
     expect(baseElement).toBeTruthy();
   });
 
-  it('should have a greeting as the title', () => {
-    const { getAllByText } = render(
+  it('should render the tip jar button', () => {
+    render(
       <BrowserRouter>
         <App />
       </BrowserRouter>
     );
+
     expect(
-      getAllByText(new RegExp('Welcome paint-app', 'gi')).length > 0
+      screen.getByRole('button', { name: /Tip Jar/i })
     ).toBeTruthy();
   });
 });

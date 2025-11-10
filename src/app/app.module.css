@@ -412,6 +412,13 @@
 .tipAltHighlight {
   font-weight: 700;
   color: #0e7490;
+  text-decoration: none;
+}
+
+.tipAltHighlight:hover,
+.tipAltHighlight:focus {
+  color: #0f9eb8;
+  text-decoration: underline;
 }
 
 .doomButton {

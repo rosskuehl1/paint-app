@@ -5,7 +5,8 @@ import { PayPalConfig } from '../services/paypal.types';
  * Loads configuration from environment variables with sensible defaults
  */
 export const getPayPalConfig = (): PayPalConfig => {
-  const mode = (import.meta.env.VITE_PAYPAL_MODE as 'sandbox' | 'production') || 'sandbox';
+  const envMode = import.meta.env.VITE_PAYPAL_MODE as 'sandbox' | 'production' | undefined;
+  const mode = envMode || (import.meta.env.PROD ? 'production' : 'sandbox');
   const baseUrl =
     mode === 'production'
       ? 'https://api-m.paypal.com'
@@ -39,6 +40,10 @@ export const validatePayPalConfig = (config: PayPalConfig): void => {
 
   if (config.mode !== 'sandbox' && config.mode !== 'production') {
     throw new Error('PayPal mode must be either "sandbox" or "production".');
+  }
+
+  if (import.meta.env.PROD && config.mode !== 'production') {
+    console.warn('PayPal mode is set to sandbox while running in production. Live tips will be simulated.');
   }
 };
 
