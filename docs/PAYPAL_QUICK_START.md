@@ -78,6 +78,10 @@ const presetTipOptions = [1, 3, 5, 10, 25, 50]; // Edit these
   isOpen: boolean           // Modal state
   isProcessing: boolean     // Processing payment
   error: string | null      // Error message
+   prefetchError: string | null // Prefetch error message
+   isPrefetching: boolean    // Preparing PayPal checkout
+   isCheckoutReady: boolean  // Prefetched order is ready
+   currentAmount: number | null // Normalized amount value
   selectedAmount: number    // Selected preset
   customAmount: string      // Custom amount input
   message: string          // Optional message
@@ -92,7 +96,7 @@ const presetTipOptions = [1, 3, 5, 10, 25, 50]; // Edit these
 ```typescript
 initialize()                                    // Setup
 isAvailable(): boolean                         // Check config
-createTipOrder(amount, message?): Promise<Order>
+createTipOrder(amount, message?, options?): Promise<Order>
 captureTipOrder(orderId): Promise<Result>
 verifyOrder(orderId): Promise<Status>
 ```

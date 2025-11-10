@@ -57,6 +57,7 @@ export function App() {
   };
 
   const hasCustomTipAmount = tipJar.customAmount.trim() !== '';
+  const isTipSubmitDisabled = tipJar.isProcessing || tipJar.currentAmount === null;
 
   const formatCurrency = useCallback(
     (amount: number) =>
@@ -947,6 +948,21 @@ export function App() {
                   {tipJar.error}
                 </p>
               )}
+              {!tipJar.error && tipJar.prefetchError && (
+                <p className={styles.tipWarning} role="status">
+                  {tipJar.prefetchError}
+                </p>
+              )}
+              {tipJar.isPrefetching && !tipJar.prefetchError && (
+                <p className={styles.tipStatus} role="status">
+                  Preparing secure PayPal checkout...
+                </p>
+              )}
+              {tipJar.isCheckoutReady && !tipJar.isPrefetching && tipJar.isPayPalAvailable && (
+                <p className={styles.tipStatusReady} role="status">
+                  Checkout ready - you'll head to PayPal immediately.
+                </p>
+              )}
               <div className={styles.tipActions}>
                 <button
                   type="button"
@@ -959,7 +975,7 @@ export function App() {
                 <button
                   type="submit"
                   className={`${styles.toolButton} ${styles.tipSubmitButton}`}
-                  disabled={tipJar.isProcessing}
+                  disabled={isTipSubmitDisabled}
                 >
                   {tipJar.isProcessing ? 'Processing...' : 'Send Tip'}
                 </button>

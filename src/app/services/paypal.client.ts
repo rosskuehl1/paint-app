@@ -1,6 +1,12 @@
 import { PayPalService } from './paypal.service';
 import { getPayPalConfig, validatePayPalConfig } from '../config/paypal.config';
-import type { CreateOrderRequest, CreateOrderResponse, CaptureOrderRequest, CaptureOrderResponse } from './paypal.types';
+import type {
+  CreateOrderRequest,
+  CreateOrderResponse,
+  CaptureOrderRequest,
+  CaptureOrderResponse,
+  CreateOrderOptions,
+} from './paypal.types';
 
 /**
  * PayPal API client for frontend use
@@ -38,7 +44,7 @@ class PayPalClient {
   /**
    * Create a tip order
    */
-  async createTipOrder(amount: number, message?: string): Promise<CreateOrderResponse> {
+  async createTipOrder(amount: number, message?: string, options: CreateOrderOptions = {}): Promise<CreateOrderResponse> {
     if (!this.service) {
       throw new Error('PayPal service not initialized. Tips are currently unavailable.');
     }
@@ -50,7 +56,7 @@ class PayPalClient {
       message,
     };
 
-    return this.service.createOrder(request);
+    return this.service.createOrder(request, options);
   }
 
   /**

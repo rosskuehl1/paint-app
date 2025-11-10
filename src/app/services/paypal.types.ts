@@ -17,6 +17,10 @@ export interface CreateOrderRequest {
   message?: string;
 }
 
+export interface CreateOrderOptions {
+  signal?: AbortSignal;
+}
+
 export interface CreateOrderResponse {
   orderId: string;
   approvalUrl?: string;

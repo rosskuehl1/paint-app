@@ -8,6 +8,7 @@ import {
   CaptureOrderRequest,
   CaptureOrderResponse,
   PayPalError,
+  CreateOrderOptions,
 } from './paypal.types';
 import { buildAppUrl } from '../config/app-paths';
 
@@ -64,7 +65,7 @@ export class PayPalService {
   /**
    * Create a PayPal order for a tip/donation
    */
-  async createOrder(request: CreateOrderRequest): Promise<CreateOrderResponse> {
+  async createOrder(request: CreateOrderRequest, options: CreateOrderOptions = {}): Promise<CreateOrderResponse> {
     try {
       // Validate amount
       if (request.amount <= 0) {
@@ -108,6 +109,7 @@ export class PayPalService {
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(orderPayload),
+        signal: options.signal,
       });
 
       if (!response.ok) {

@@ -14,6 +14,7 @@ PaintApp includes a fully integrated PayPal payment system for accepting tips an
 - ✅ **Loading States**: Visual feedback during payment processing
 - ✅ **Error Handling**: User-friendly error messages
 - ✅ **Fallback Mode**: Works in simulation mode without PayPal configured
+- ✅ **Checkout Prefetching**: Prepares PayPal redirect in advance for faster tip submissions
 
 ## Architecture
 
@@ -172,6 +173,10 @@ interface UseTipJarResult {
   isOpen: boolean;              // Modal open state
   isProcessing: boolean;        // Payment in progress
   error: string | null;         // Error message
+  prefetchError: string | null; // Prefetch error message
+  isPrefetching: boolean;       // Preparing PayPal checkout
+  isCheckoutReady: boolean;     // Prefetched order is ready
+  currentAmount: number | null; // Normalized amount in USD
   selectedAmount: number | null; // Selected preset
   customAmount: string;         // Custom amount input
   message: string;              // Optional message
@@ -333,7 +338,7 @@ export const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP'];
 const [currency, setCurrency] = useState('USD');
 
 // Pass currency to order creation
-await paypalClient.createTipOrder(amount, message, currency);
+await paypalClient.createTipOrder(amount, message);
 ```
 
 ### Webhooks for Backend Verification
