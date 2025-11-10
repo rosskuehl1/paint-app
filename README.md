@@ -41,6 +41,40 @@ npx nx serve paint-app
 - The dev server runs on `http://localhost:5173/` by default.
 - Use `npx nx build paint-app` for a production build and `npx nx test paint-app` to run the unit tests.
 
+### PayPal Integration Setup (Optional)
+
+PaintApp includes integrated PayPal support for accepting tips. To enable PayPal:
+
+1. **Create a PayPal Developer Account**
+   - Visit [PayPal Developer Portal](https://developer.paypal.com/)
+   - Create an account or sign in
+
+2. **Create an Application**
+   - Navigate to Dashboard → My Apps & Credentials
+   - Create a new app or use an existing one
+   - Copy your Client ID and Client Secret
+
+3. **Configure Environment Variables**
+   - Copy `.env.example` to `.env.local`
+   - Fill in your PayPal credentials:
+     ```env
+     VITE_PAYPAL_CLIENT_ID=your_client_id_here
+     VITE_PAYPAL_CLIENT_SECRET=your_client_secret_here
+     VITE_PAYPAL_MODE=sandbox  # Use 'production' for live payments
+     ```
+
+4. **Security Best Practice**
+   - ⚠️ **Never commit `.env.local` to version control**
+   - For production, move sensitive credentials to a secure backend service
+   - The current implementation is suitable for demos and testing
+
+5. **Testing**
+   - Use PayPal sandbox accounts for testing
+   - Create test buyer/seller accounts in the PayPal Developer Portal
+   - Test the tip flow end-to-end
+
+Without PayPal configuration, the tip jar will work in simulation mode (no actual payments).
+
 ## 📦 Deployment
 
 - Run `npm run deploy` to build the project and publish `dist/paint-app` to the `gh-pages` branch.
