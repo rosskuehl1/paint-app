@@ -3,10 +3,13 @@ import styles from './app.module.css';
 
 type Tool = 'pencil' | 'brush' | 'eraser' | 'rectangle' | 'oval';
 
+const presetTipOptions = [3, 5, 10, 25];
+
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const tipJarRef = useRef<HTMLDivElement>(null);
   const [tool, setTool] = useState<Tool>('pencil');
   const [color, setColor] = useState('#000000');
   const [brushSize, setBrushSize] = useState(5);
@@ -21,6 +24,11 @@ export function App() {
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [activePointerType, setActivePointerType] = useState<'mouse' | 'touch' | 'pen'>('mouse');
   const [isPointerDown, setIsPointerDown] = useState(false);
+  const [isTipJarOpen, setIsTipJarOpen] = useState(false);
+  const [selectedTipAmount, setSelectedTipAmount] = useState<number | null>(5);
+  const [customTipInput, setCustomTipInput] = useState('');
+  const [tipMessage, setTipMessage] = useState('');
+  const [tipError, setTipError] = useState<string | null>(null);
 
   const toolLabels: Record<Tool, string> = {
     pencil: 'Pencil',
@@ -35,6 +43,82 @@ export function App() {
     touch: 'Touch',
     pen: 'Stylus'
   };
+
+  const hasCustomTipAmount = customTipInput.trim() !== '';
+
+  const formatCurrency = useCallback(
+    (amount: number) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount),
+    []
+  );
+
+  const handleTipCancel = useCallback(() => {
+    setIsTipJarOpen(false);
+    setSelectedTipAmount(5);
+    setCustomTipInput('');
+    setTipMessage('');
+    setTipError(null);
+  }, []);
+
+  const confirmTip = useCallback(() => {
+    const trimmedCustom = customTipInput.trim();
+    const amountCandidate = trimmedCustom !== '' ? Number.parseFloat(trimmedCustom) : selectedTipAmount;
+
+    if (amountCandidate === null || Number.isNaN(amountCandidate) || amountCandidate <= 0) {
+      setTipError('Enter a valid tip amount greater than zero.');
+      return;
+    }
+
+    const normalizedAmount = Math.round(amountCandidate * 100) / 100;
+    const message = tipMessage.trim();
+    const appreciationSuffix = message ? ' Thanks for the note!' : '';
+
+    setNotification(`Thanks for the ${formatCurrency(normalizedAmount)} tip!${appreciationSuffix}`);
+    handleTipCancel();
+  }, [customTipInput, formatCurrency, handleTipCancel, selectedTipAmount, tipMessage]);
+
+  const handleTipSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      confirmTip();
+    },
+    [confirmTip]
+  );
+
+  const handlePresetSelect = useCallback((amount: number) => {
+    setSelectedTipAmount(amount);
+    setCustomTipInput('');
+    setTipError(null);
+  }, []);
+
+  const handleCustomTipChange = useCallback((value: string) => {
+    setCustomTipInput(value);
+    if (value.trim() !== '') {
+      setSelectedTipAmount(null);
+    }
+    setTipError(null);
+  }, []);
+
+  useEffect(() => {
+    if (!isTipJarOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleTipCancel();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleTipCancel, isTipJarOpen]);
+
+  useEffect(() => {
+    if (!isTipJarOpen) return;
+    const next = tipJarRef.current;
+    if (next) {
+      next.focus();
+    }
+  }, [isTipJarOpen]);
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -724,6 +808,31 @@ export function App() {
             <span className={styles.toolLabel}>Clear</span>
           </button>
         </div>
+        <div className={styles.toolGroup}>
+          <button
+            className={`${styles.toolButton} ${styles.tipButton} ${isTipJarOpen ? styles.tipButtonOpen : ''}`}
+            onClick={() => {
+              if (isTipJarOpen) {
+                handleTipCancel();
+              } else {
+                setIsTipJarOpen(true);
+                setSelectedTipAmount(5);
+                setCustomTipInput('');
+                setTipMessage('');
+                setTipError(null);
+              }
+            }}
+            title="Support the project with a tip"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M6 3h8" strokeLinecap="round"/>
+              <path d="M5 5h10l.8 3.2a3.5 3.5 0 0 1 .2 1v5.3A2.5 2.5 0 0 1 13.5 17h-7A2.5 2.5 0 0 1 4 14.5V9.2a3.5 3.5 0 0 1 .2-1L5 5z" strokeLinejoin="round"/>
+              <path d="M8 9.5h4" strokeLinecap="round"/>
+              <path d="M7.6 13.2c.5.9 1.5 1.5 2.4 1.5s1.9-.6 2.4-1.5" strokeLinecap="round"/>
+            </svg>
+            <span className={styles.toolLabel}>Tip Jar</span>
+          </button>
+        </div>
       </div>
       <div className={styles.canvasContainer}>
         <canvas 
@@ -766,6 +875,97 @@ export function App() {
           <span className={styles.statusHighlight}>Paste mode active · Click to place</span>
         )}
       </div>
+      {isTipJarOpen && (
+        <div
+          className={styles.tipJarOverlay}
+          role="presentation"
+          onClick={handleTipCancel}
+        >
+          <div
+            className={styles.tipJarCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tipJarTitle"
+            aria-describedby="tipJarDescription"
+            onClick={(event) => event.stopPropagation()}
+            ref={tipJarRef}
+            tabIndex={-1}
+          >
+            <form className={styles.tipJarForm} onSubmit={handleTipSubmit}>
+              <div className={styles.tipJarHeader}>
+                <h2 id="tipJarTitle" className={styles.tipJarTitle}>Tip Jar</h2>
+                <p id="tipJarDescription" className={styles.tipJarSubtitle}>
+                  Support continued improvements with a quick tip.
+                </p>
+              </div>
+              <div className={styles.tipPresetGroup} role="group" aria-label="Choose a tip amount">
+                {presetTipOptions.map((amount) => {
+                  const isActive = !hasCustomTipAmount && selectedTipAmount === amount;
+                  return (
+                    <button
+                      key={amount}
+                      type="button"
+                      className={`${styles.tipPresetButton} ${isActive ? styles.tipPresetButtonActive : ''}`}
+                      onClick={() => handlePresetSelect(amount)}
+                    >
+                      {formatCurrency(amount)}
+                    </button>
+                  );
+                })}
+              </div>
+              <label className={styles.tipField}>
+                Custom amount
+                <div className={styles.tipInputWrapper}>
+                  <span className={styles.tipCurrencySymbol}>$</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    inputMode="decimal"
+                    placeholder="5.00"
+                    className={styles.tipInput}
+                    value={customTipInput}
+                    onChange={(event) => handleCustomTipChange(event.target.value)}
+                  />
+                </div>
+              </label>
+              <label className={styles.tipField}>
+                Message (optional)
+                <textarea
+                  className={styles.tipTextarea}
+                  rows={3}
+                  value={tipMessage}
+                  onChange={(event) => setTipMessage(event.target.value)}
+                  placeholder="Tell us what you'd love to see next!"
+                />
+              </label>
+              {tipError && (
+                <p className={styles.tipError} role="alert">
+                  {tipError}
+                </p>
+              )}
+              <div className={styles.tipActions}>
+                <button
+                  type="button"
+                  className={`${styles.toolButton} ${styles.tipCancelButton}`}
+                  onClick={handleTipCancel}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`${styles.toolButton} ${styles.tipSubmitButton}`}
+                >
+                  Send Tip
+                </button>
+              </div>
+              <p className={styles.tipFinePrint}>
+                Tips are simulated—complete the support on your favorite payment platform.
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
       {notification && (
         <div className={styles.notification}>
           {notification}
