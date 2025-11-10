@@ -6,22 +6,29 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background-color: #f0f2f5;
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 10px 20px;
-  background-color: #f5f5f5;
+  gap: 16px;
+  padding: 12px 20px;
+  background-color: rgba(245, 245, 245, 0.95);
   border-bottom: 2px solid #ddd;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
 }
 
 .toolGroup {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .toolButton {
@@ -35,6 +42,7 @@
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s;
+  min-height: 36px;
 }
 
 .toolButton svg {
@@ -54,6 +62,7 @@
   background-color: #007bff;
   color: white;
   border-color: #0056b3;
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
 }
 
 .toolButton:disabled {
@@ -65,6 +74,11 @@
 .toolButton:disabled:hover {
   background-color: #f5f5f5;
   border-color: #ccc;
+}
+
+.toolButton:focus-visible {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
 }
 
 .label {
@@ -97,6 +111,7 @@
   position: relative;
   flex: 1;
   overflow: hidden;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.9), rgba(240, 242, 245, 0.9));
 }
 
 .canvas {
@@ -106,6 +121,9 @@
   top: 0;
   left: 0;
   z-index: 1;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
 }
 
 .canvas.pasteMode {
@@ -120,15 +138,55 @@
   left: 0;
   z-index: 2;
   pointer-events: auto;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
 }
 
 .overlayCanvas.pasteMode {
   cursor: copy;
 }
 
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  background-color: rgba(33, 37, 41, 0.85);
+  color: #f1f3f5;
+  font-size: 13px;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.01em;
+  flex: 0 0 auto;
+}
+
+.statusItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.statusHighlight {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background-color: rgba(0, 123, 255, 0.2);
+  color: #63b3ff;
+  font-weight: 600;
+}
+
+.colorSwatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
 .notification {
   position: fixed;
-  bottom: 30px;
+  bottom: 80px;
   left: 50%;
   transform: translateX(-50%);
   background-color: rgba(0, 0, 0, 0.8);

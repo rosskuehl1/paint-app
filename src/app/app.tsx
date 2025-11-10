@@ -6,37 +6,144 @@ type Tool = 'pencil' | 'brush' | 'eraser' | 'rectangle' | 'oval';
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
   const [tool, setTool] = useState<Tool>('pencil');
   const [color, setColor] = useState('#000000');
   const [brushSize, setBrushSize] = useState(5);
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [selectionShape, setSelectionShape] = useState<'rectangle' | 'oval' | null>(null);
   const [copiedImageData, setCopiedImageData] = useState<ImageData | null>(null);
   const [pastePreviewPos, setPastePreviewPos] = useState<{ x: number; y: number } | null>(null);
   const [isPastingMode, setIsPastingMode] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+  const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [activePointerType, setActivePointerType] = useState<'mouse' | 'touch' | 'pen'>('mouse');
+  const [isPointerDown, setIsPointerDown] = useState(false);
+
+  const toolLabels: Record<Tool, string> = {
+    pencil: 'Pencil',
+    brush: 'Brush',
+    eraser: 'Eraser',
+    rectangle: 'Rectangle',
+    oval: 'Oval'
+  };
+
+  const pointerLabels: Record<'mouse' | 'touch' | 'pen', string> = {
+    mouse: 'Mouse',
+    touch: 'Touch',
+    pen: 'Stylus'
+  };
+
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!canvas || !overlayCanvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const overlayCtx = overlayCanvas.getContext('2d');
+    if (!ctx || !overlayCtx) return;
+
+    const toolbarHeight = toolbarRef.current?.getBoundingClientRect().height ?? 0;
+    const width = window.innerWidth;
+    const height = Math.max(window.innerHeight - toolbarHeight, 200);
+
+    const snapshotCanvas = document.createElement('canvas');
+    snapshotCanvas.width = canvas.width;
+    snapshotCanvas.height = canvas.height;
+    const snapshotCtx = snapshotCanvas.getContext('2d');
+    if (snapshotCtx) {
+      snapshotCtx.drawImage(canvas, 0, 0);
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    overlayCanvas.width = width;
+    overlayCanvas.height = height;
+
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, width, height);
+
+    if (snapshotCanvas.width > 0 && snapshotCanvas.height > 0) {
+      ctx.drawImage(snapshotCanvas, 0, 0);
+    }
+
+    overlayCtx.clearRect(0, 0, width, height);
+    setCanvasSize({ width, height });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    resizeCanvas();
+
+    window.addEventListener('resize', resizeCanvas);
+
+    let observer: ResizeObserver | null = null;
+    const toolbarEl = toolbarRef.current;
+    if ('ResizeObserver' in window && toolbarEl) {
+      observer = new ResizeObserver(() => resizeCanvas());
+      observer.observe(toolbarEl);
+    }
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      if (observer && toolbarEl) {
+        observer.unobserve(toolbarEl);
+      }
+      observer?.disconnect();
+    };
+  }, [resizeCanvas]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
     if (!canvas || !overlayCanvas) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (isPastingMode) {
+      canvas.style.cursor = 'copy';
+      overlayCanvas.style.cursor = 'copy';
+      return;
+    }
 
-    // Set canvas size
-    const width = window.innerWidth;
-    const height = window.innerHeight - 60; // Account for toolbar height
-    
-    canvas.width = width;
-    canvas.height = height;
-    overlayCanvas.width = width;
-    overlayCanvas.height = height;
+    if (tool === 'pencil' || tool === 'brush' || tool === 'eraser') {
+      const visibleSize = Math.ceil(Math.min(Math.max(brushSize, 6), 64));
+      const diameter = visibleSize + 6;
+      const cursorCanvas = document.createElement('canvas');
+      cursorCanvas.width = diameter;
+      cursorCanvas.height = diameter;
+      const cursorCtx = cursorCanvas.getContext('2d');
 
-    // Fill with white background
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (cursorCtx) {
+        cursorCtx.clearRect(0, 0, diameter, diameter);
+        cursorCtx.beginPath();
+        cursorCtx.arc(diameter / 2, diameter / 2, visibleSize / 2, 0, Math.PI * 2);
+        cursorCtx.fillStyle = tool === 'eraser' ? 'rgba(255, 255, 255, 0.85)' : color;
+        cursorCtx.globalAlpha = tool === 'brush' ? 0.6 : 1;
+        cursorCtx.fill();
+        cursorCtx.globalAlpha = 1;
+        cursorCtx.lineWidth = 1;
+        cursorCtx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+        cursorCtx.stroke();
+      }
+
+      const hotspot = diameter / 2;
+      const dataUrl = cursorCanvas.toDataURL();
+      const cursorValue = `url(${dataUrl}) ${hotspot} ${hotspot}, crosshair`;
+      canvas.style.cursor = cursorValue;
+      overlayCanvas.style.cursor = cursorValue;
+    } else {
+      canvas.style.cursor = 'crosshair';
+      overlayCanvas.style.cursor = 'crosshair';
+    }
+  }, [tool, brushSize, color, isPastingMode]);
+
+  const getCanvasCoordinates = useCallback((canvas: HTMLCanvasElement, event: React.PointerEvent<HTMLCanvasElement>) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    };
   }, []);
 
   // Copy function - copies selected region
@@ -92,6 +199,7 @@ export function App() {
 
     // Clear selection
     setSelectedRegion(null);
+    setSelectionShape(null);
     const overlayCanvas = overlayCanvasRef.current;
     if (overlayCanvas) {
       const overlayCtx = overlayCanvas.getContext('2d');
@@ -107,6 +215,7 @@ export function App() {
     if (!copiedImageData) return;
     setIsPastingMode(true);
     setSelectedRegion(null);
+    setSelectionShape(null);
     setNotification('Click to paste');
     
     // Clear overlay
@@ -204,16 +313,24 @@ export function App() {
     overlayCtx.setLineDash([]);
   }, [isPastingMode, copiedImageData, pastePreviewPos]);
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const point = getCanvasCoordinates(canvas, e);
+    const { x, y } = point;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore capture errors when pointer events are not fully supported
+    }
+
+    const normalizedPointer = e.pointerType === 'pen' ? 'pen' : e.pointerType === 'touch' ? 'touch' : 'mouse';
+    setActivePointerType(normalizedPointer);
 
     // Handle paste mode
     if (isPastingMode && copiedImageData) {
@@ -246,24 +363,27 @@ export function App() {
     }
 
     setIsDrawing(true);
+    setIsPointerDown(true);
 
     if (tool === 'rectangle' || tool === 'oval') {
       setSelectionStart({ x, y });
       setSelectedRegion(null);
+      setSelectionShape(null);
     } else {
       ctx.beginPath();
       ctx.moveTo(x, y);
     }
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === 'touch') {
+      e.preventDefault();
+    }
     const canvas = canvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
     if (!canvas || !overlayCanvas) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const { x, y } = getCanvasCoordinates(canvas, e);
 
     // Update paste preview position
     if (isPastingMode) {
@@ -283,8 +403,16 @@ export function App() {
       
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
       
-      const width = x - selectionStart.x;
-      const height = y - selectionStart.y;
+      let width = x - selectionStart.x;
+      let height = y - selectionStart.y;
+
+      if (e.shiftKey) {
+        const size = Math.max(Math.abs(width), Math.abs(height));
+        const widthSign = width === 0 ? 1 : Math.sign(width);
+        const heightSign = height === 0 ? 1 : Math.sign(height);
+        width = size * widthSign;
+        height = size * heightSign;
+      }
       
       overlayCtx.strokeStyle = '#000';
       overlayCtx.lineWidth = 1;
@@ -342,7 +470,7 @@ export function App() {
     }
   };
 
-  const stopDrawing = (e?: React.MouseEvent<HTMLCanvasElement>) => {
+  const stopDrawing = (e?: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
     if (!canvas || !overlayCanvas) return;
@@ -352,12 +480,18 @@ export function App() {
     if (!ctx || !overlayCtx) return;
 
     if (isDrawing && selectionStart && e && (tool === 'rectangle' || tool === 'oval')) {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      
-      const width = x - selectionStart.x;
-      const height = y - selectionStart.y;
+      const { x, y } = getCanvasCoordinates(canvas, e);
+
+      let width = x - selectionStart.x;
+      let height = y - selectionStart.y;
+
+      if (e.shiftKey) {
+        const size = Math.max(Math.abs(width), Math.abs(height));
+        const widthSign = width === 0 ? 1 : Math.sign(width);
+        const heightSign = height === 0 ? 1 : Math.sign(height);
+        width = size * widthSign;
+        height = size * heightSign;
+      }
       
       setSelectedRegion({
         x: selectionStart.x,
@@ -365,19 +499,79 @@ export function App() {
         width,
         height
       });
+      setSelectionShape(tool);
     }
 
     setIsDrawing(false);
+    setIsPointerDown(false);
     ctx.closePath();
     ctx.globalAlpha = 1; // Reset alpha
     ctx.globalCompositeOperation = 'source-over';
     ctx.shadowBlur = 0;
     overlayCtx.setLineDash([]);
+    setSelectionStart(null);
+
+    if (e) {
+      try {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        // ignore pointer capture release errors
+      }
+    }
   };
+
+  useEffect(() => {
+    if (isDrawing) return;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!overlayCanvas) return;
+
+    const overlayCtx = overlayCanvas.getContext('2d');
+    if (!overlayCtx) return;
+
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    if (!selectedRegion || !selectionShape) return;
+
+    const normalizedRegion = {
+      x: selectedRegion.width < 0 ? selectedRegion.x + selectedRegion.width : selectedRegion.x,
+      y: selectedRegion.height < 0 ? selectedRegion.y + selectedRegion.height : selectedRegion.y,
+      width: Math.abs(selectedRegion.width),
+      height: Math.abs(selectedRegion.height)
+    };
+
+    overlayCtx.strokeStyle = selectionShape === 'oval' ? '#0d6efd' : '#007bff';
+    overlayCtx.lineWidth = 1;
+    overlayCtx.setLineDash([6, 6]);
+
+    if (selectionShape === 'rectangle') {
+      overlayCtx.strokeRect(
+        normalizedRegion.x,
+        normalizedRegion.y,
+        normalizedRegion.width,
+        normalizedRegion.height
+      );
+    } else if (selectionShape === 'oval') {
+      overlayCtx.beginPath();
+      overlayCtx.ellipse(
+        normalizedRegion.x + normalizedRegion.width / 2,
+        normalizedRegion.y + normalizedRegion.height / 2,
+        Math.abs(normalizedRegion.width / 2),
+        Math.abs(normalizedRegion.height / 2),
+        0,
+        0,
+        2 * Math.PI
+      );
+      overlayCtx.stroke();
+    }
+
+    overlayCtx.setLineDash([]);
+  }, [selectedRegion, selectionShape, isDrawing, canvasSize]);
 
   return (
     <div className={styles.container}>
-      <div className={styles.toolbar}>
+      <div className={styles.toolbar} ref={toolbarRef}>
         <div className={styles.toolGroup}>
           <button
             className={`${styles.toolButton} ${tool === 'rectangle' ? styles.active : ''}`}
@@ -514,6 +708,13 @@ export function App() {
               if (!ctx) return;
               ctx.fillStyle = 'white';
               ctx.fillRect(0, 0, canvas.width, canvas.height);
+              setSelectedRegion(null);
+              setSelectionShape(null);
+              const overlayCanvas = overlayCanvasRef.current;
+              if (overlayCanvas) {
+                const overlayCtx = overlayCanvas.getContext('2d');
+                overlayCtx?.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+              }
             }}
             title="Clear Canvas"
           >
@@ -528,19 +729,42 @@ export function App() {
         <canvas 
           ref={canvasRef} 
           className={`${styles.canvas} ${isPastingMode ? styles.pasteMode : ''}`}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
+          onPointerDown={startDrawing}
+          onPointerMove={draw}
+          onPointerUp={stopDrawing}
+          onPointerLeave={stopDrawing}
+          onPointerCancel={stopDrawing}
         />
         <canvas 
           ref={overlayCanvasRef} 
           className={`${styles.overlayCanvas} ${isPastingMode ? styles.pasteMode : ''}`}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
+          onPointerDown={startDrawing}
+          onPointerMove={draw}
+          onPointerUp={stopDrawing}
+          onPointerLeave={stopDrawing}
+          onPointerCancel={stopDrawing}
         />
+      </div>
+      <div className={styles.statusBar}>
+        <span className={styles.statusItem}>Tool: {toolLabels[tool]}</span>
+        <span className={styles.statusItem}>
+          Color:
+          <span
+            className={styles.colorSwatch}
+            style={{ backgroundColor: tool === 'eraser' ? '#ffffff' : color }}
+            aria-hidden="true"
+          />
+          {tool === 'eraser' ? 'Eraser white' : color.toUpperCase()}
+        </span>
+        <span className={styles.statusItem}>Size: {brushSize}px</span>
+        <span className={styles.statusItem}>
+          Canvas: {canvasSize.width > 0 && canvasSize.height > 0 ? `${canvasSize.width}×${canvasSize.height}px` : 'Sizing…'}
+        </span>
+        <span className={styles.statusItem}>Input: {pointerLabels[activePointerType]}</span>
+        <span className={styles.statusItem}>State: {isPointerDown ? 'Drawing' : 'Ready'}</span>
+        {isPastingMode && (
+          <span className={styles.statusHighlight}>Paste mode active · Click to place</span>
+        )}
       </div>
       {notification && (
         <div className={styles.notification}>
