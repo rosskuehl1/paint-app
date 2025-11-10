@@ -1,4 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { paypalClient } from './services/paypal.client';
+import { useTipJar } from './hooks/useTipJar';
 import styles from './app.module.css';
 
 type Tool = 'pencil' | 'brush' | 'eraser' | 'rectangle' | 'oval';
@@ -24,11 +26,18 @@ export function App() {
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [activePointerType, setActivePointerType] = useState<'mouse' | 'touch' | 'pen'>('mouse');
   const [isPointerDown, setIsPointerDown] = useState(false);
-  const [isTipJarOpen, setIsTipJarOpen] = useState(false);
-  const [selectedTipAmount, setSelectedTipAmount] = useState<number | null>(5);
-  const [customTipInput, setCustomTipInput] = useState('');
-  const [tipMessage, setTipMessage] = useState('');
-  const [tipError, setTipError] = useState<string | null>(null);
+
+  // Use the tip jar hook for PayPal integration
+  const tipJar = useTipJar({
+    onSuccess: (amount, message) => {
+      const appreciationSuffix = message ? ' Thanks for the note!' : '';
+      setNotification(`Thanks for the $${amount.toFixed(2)} tip!${appreciationSuffix}`);
+    },
+    onError: (error) => {
+      console.error('Tip error:', error);
+      setNotification('Sorry, there was an issue processing your tip. Please try again.');
+    },
+  });
 
   const toolLabels: Record<Tool, string> = {
     pencil: 'Pencil',
@@ -44,7 +53,7 @@ export function App() {
     pen: 'Stylus'
   };
 
-  const hasCustomTipAmount = customTipInput.trim() !== '';
+  const hasCustomTipAmount = tipJar.customAmount.trim() !== '';
 
   const formatCurrency = useCallback(
     (amount: number) =>
@@ -52,73 +61,51 @@ export function App() {
     []
   );
 
-  const handleTipCancel = useCallback(() => {
-    setIsTipJarOpen(false);
-    setSelectedTipAmount(5);
-    setCustomTipInput('');
-    setTipMessage('');
-    setTipError(null);
-  }, []);
-
-  const confirmTip = useCallback(() => {
-    const trimmedCustom = customTipInput.trim();
-    const amountCandidate = trimmedCustom !== '' ? Number.parseFloat(trimmedCustom) : selectedTipAmount;
-
-    if (amountCandidate === null || Number.isNaN(amountCandidate) || amountCandidate <= 0) {
-      setTipError('Enter a valid tip amount greater than zero.');
-      return;
-    }
-
-    const normalizedAmount = Math.round(amountCandidate * 100) / 100;
-    const message = tipMessage.trim();
-    const appreciationSuffix = message ? ' Thanks for the note!' : '';
-
-    setNotification(`Thanks for the ${formatCurrency(normalizedAmount)} tip!${appreciationSuffix}`);
-    handleTipCancel();
-  }, [customTipInput, formatCurrency, handleTipCancel, selectedTipAmount, tipMessage]);
-
   const handleTipSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      confirmTip();
+      tipJar.submitTip();
     },
-    [confirmTip]
+    [tipJar]
   );
 
   const handlePresetSelect = useCallback((amount: number) => {
-    setSelectedTipAmount(amount);
-    setCustomTipInput('');
-    setTipError(null);
-  }, []);
+    tipJar.setSelectedAmount(amount);
+    tipJar.setCustomAmount('');
+  }, [tipJar]);
 
   const handleCustomTipChange = useCallback((value: string) => {
-    setCustomTipInput(value);
+    tipJar.setCustomAmount(value);
     if (value.trim() !== '') {
-      setSelectedTipAmount(null);
+      tipJar.setSelectedAmount(null);
     }
-    setTipError(null);
+  }, [tipJar]);
+
+  // Initialize PayPal client on mount
+  useEffect(() => {
+    paypalClient.initialize();
   }, []);
 
   useEffect(() => {
-    if (!isTipJarOpen) return;
+    if (!tipJar.isOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        handleTipCancel();
+        tipJar.close();
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleTipCancel, isTipJarOpen]);
+  }, [tipJar]);
 
   useEffect(() => {
-    if (!isTipJarOpen) return;
+    if (!tipJar.isOpen) return;
     const next = tipJarRef.current;
     if (next) {
       next.focus();
     }
-  }, [isTipJarOpen]);
+  }, [tipJar.isOpen]);
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -810,16 +797,26 @@ export function App() {
         </div>
         <div className={styles.toolGroup}>
           <button
-            className={`${styles.toolButton} ${styles.tipButton} ${isTipJarOpen ? styles.tipButtonOpen : ''}`}
+            className={`${styles.toolButton} ${styles.doomButton}`}
+            onClick={() => window.open('/doom.html', '_blank', 'noopener,noreferrer')}
+            title="Launch DOOM in a new tab"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M4 5h12l1 10H3L4 5z"/>
+              <path d="M7 5V3h6v2"/>
+              <path d="M6 9h2v4H6zM12 9h2v4h-2z"/>
+            </svg>
+            <span className={styles.toolLabel}>Doom</span>
+          </button>
+        </div>
+        <div className={styles.toolGroup}>
+          <button
+            className={`${styles.toolButton} ${styles.tipButton} ${tipJar.isOpen ? styles.tipButtonOpen : ''}`}
             onClick={() => {
-              if (isTipJarOpen) {
-                handleTipCancel();
+              if (tipJar.isOpen) {
+                tipJar.close();
               } else {
-                setIsTipJarOpen(true);
-                setSelectedTipAmount(5);
-                setCustomTipInput('');
-                setTipMessage('');
-                setTipError(null);
+                tipJar.open();
               }
             }}
             title="Support the project with a tip"
@@ -875,11 +872,11 @@ export function App() {
           <span className={styles.statusHighlight}>Paste mode active · Click to place</span>
         )}
       </div>
-      {isTipJarOpen && (
+      {tipJar.isOpen && (
         <div
           className={styles.tipJarOverlay}
           role="presentation"
-          onClick={handleTipCancel}
+          onClick={tipJar.close}
         >
           <div
             className={styles.tipJarCard}
@@ -900,13 +897,14 @@ export function App() {
               </div>
               <div className={styles.tipPresetGroup} role="group" aria-label="Choose a tip amount">
                 {presetTipOptions.map((amount) => {
-                  const isActive = !hasCustomTipAmount && selectedTipAmount === amount;
+                  const isActive = !hasCustomTipAmount && tipJar.selectedAmount === amount;
                   return (
                     <button
                       key={amount}
                       type="button"
                       className={`${styles.tipPresetButton} ${isActive ? styles.tipPresetButtonActive : ''}`}
                       onClick={() => handlePresetSelect(amount)}
+                      disabled={tipJar.isProcessing}
                     >
                       {formatCurrency(amount)}
                     </button>
@@ -924,8 +922,9 @@ export function App() {
                     inputMode="decimal"
                     placeholder="5.00"
                     className={styles.tipInput}
-                    value={customTipInput}
+                    value={tipJar.customAmount}
                     onChange={(event) => handleCustomTipChange(event.target.value)}
+                    disabled={tipJar.isProcessing}
                   />
                 </div>
               </label>
@@ -934,33 +933,41 @@ export function App() {
                 <textarea
                   className={styles.tipTextarea}
                   rows={3}
-                  value={tipMessage}
-                  onChange={(event) => setTipMessage(event.target.value)}
+                  value={tipJar.message}
+                  onChange={(event) => tipJar.setMessage(event.target.value)}
                   placeholder="Tell us what you'd love to see next!"
+                  disabled={tipJar.isProcessing}
                 />
               </label>
-              {tipError && (
+              {tipJar.error && (
                 <p className={styles.tipError} role="alert">
-                  {tipError}
+                  {tipJar.error}
                 </p>
               )}
               <div className={styles.tipActions}>
                 <button
                   type="button"
                   className={`${styles.toolButton} ${styles.tipCancelButton}`}
-                  onClick={handleTipCancel}
+                  onClick={tipJar.close}
+                  disabled={tipJar.isProcessing}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className={`${styles.toolButton} ${styles.tipSubmitButton}`}
+                  disabled={tipJar.isProcessing}
                 >
-                  Send Tip
+                  {tipJar.isProcessing ? 'Processing...' : 'Send Tip'}
                 </button>
               </div>
               <p className={styles.tipFinePrint}>
-                Tips are simulated—complete the support on your favorite payment platform.
+                {tipJar.isPayPalAvailable 
+                  ? 'You will be redirected to PayPal to complete your payment securely.'
+                  : 'Tips are simulated—complete the support on your favorite payment platform.'}
+              </p>
+              <p className={styles.tipAltNotice}>
+                Prefer Cash App? Send a tip to <span className={styles.tipAltHighlight}>$RossKuehl</span>.
               </p>
             </form>
           </div>

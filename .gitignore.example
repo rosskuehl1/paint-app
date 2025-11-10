@@ -1,0 +1,14 @@
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build outputs
+dist/
+dist-ssr/
+*.local

@@ -398,6 +398,35 @@
   line-height: 1.4;
 }
 
+.tipAltNotice {
+  margin: 0;
+  font-size: 13px;
+  color: #374151;
+  background: rgba(14, 116, 144, 0.08);
+  border: 1px dashed rgba(14, 116, 144, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
+.tipAltHighlight {
+  font-weight: 700;
+  color: #0e7490;
+}
+
+.doomButton {
+  background: linear-gradient(135deg, #2d2d2d, #575757);
+  border-color: #1f1f1f;
+  color: #f8f9fa;
+  box-shadow: 0 2px 10px rgba(15, 15, 15, 0.25);
+}
+
+.doomButton:hover {
+  background: linear-gradient(135deg, #464646, #7a2d2d);
+  border-color: #a11e1e;
+  color: #ffffff;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
