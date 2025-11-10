@@ -61,6 +61,10 @@ Issues and pull requests are welcome! If you plan to tackle a larger feature, pl
 3. Run `npx nx format:write` and `npx nx test paint-app`.
 4. Open a pull request describing your changes.
 
-## 📄 License
+## � Funding
+
+If you find PaintApp helpful, consider supporting ongoing development on [PayPal](https://paypal.me/rosskuehl).
+
+## �📄 License
 
 This project is released under the MIT License.
