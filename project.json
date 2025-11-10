@@ -15,7 +15,12 @@
       "outputs": [],
       "options": {
         "cwd": ".",
-        "command": "npx gh-pages -d dist/paint-app --branch gh-pages --dotfiles --repo https://github.com/rosskuehl1/rosskuehl1.github.io.git"
+        "commands": [
+          "mkdir -p dist/paint-app/paint-app",
+          "cp redirect-template.html dist/paint-app/paint-app/index.html",
+          "npx gh-pages -d dist/paint-app --branch gh-pages --dotfiles --repo https://github.com/rosskuehl1/rosskuehl1.github.io.git"
+        ],
+        "parallel": false
       }
     }
   }
