@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import styles from './app.module.css';
 
 type Tool = 'pencil' | 'brush' | 'eraser' | 'rectangle' | 'oval';
@@ -12,9 +12,10 @@ export function App() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  
-  // Suppress unused warning - selectedRegion is set for future use
-  console.log(selectedRegion);
+  const [copiedImageData, setCopiedImageData] = useState<ImageData | null>(null);
+  const [pastePreviewPos, setPastePreviewPos] = useState<{ x: number; y: number } | null>(null);
+  const [isPastingMode, setIsPastingMode] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,6 +39,171 @@ export function App() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }, []);
 
+  // Copy function - copies selected region
+  const copySelection = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !selectedRegion) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Normalize the region (handle negative width/height)
+    const normalizedRegion = {
+      x: selectedRegion.width < 0 ? selectedRegion.x + selectedRegion.width : selectedRegion.x,
+      y: selectedRegion.height < 0 ? selectedRegion.y + selectedRegion.height : selectedRegion.y,
+      width: Math.abs(selectedRegion.width),
+      height: Math.abs(selectedRegion.height)
+    };
+
+    // Get the image data from the selected region
+    const imageData = ctx.getImageData(
+      normalizedRegion.x,
+      normalizedRegion.y,
+      normalizedRegion.width,
+      normalizedRegion.height
+    );
+
+    setCopiedImageData(imageData);
+    setNotification('Copied to clipboard');
+  }, [selectedRegion]);
+
+  // Cut function - copies and clears selected region
+  const cutSelection = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !selectedRegion) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Copy first
+    copySelection();
+
+    // Normalize the region
+    const normalizedRegion = {
+      x: selectedRegion.width < 0 ? selectedRegion.x + selectedRegion.width : selectedRegion.x,
+      y: selectedRegion.height < 0 ? selectedRegion.y + selectedRegion.height : selectedRegion.y,
+      width: Math.abs(selectedRegion.width),
+      height: Math.abs(selectedRegion.height)
+    };
+
+    // Clear the region (fill with white)
+    ctx.fillStyle = 'white';
+    ctx.fillRect(normalizedRegion.x, normalizedRegion.y, normalizedRegion.width, normalizedRegion.height);
+
+    // Clear selection
+    setSelectedRegion(null);
+    const overlayCanvas = overlayCanvasRef.current;
+    if (overlayCanvas) {
+      const overlayCtx = overlayCanvas.getContext('2d');
+      if (overlayCtx) {
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      }
+    }
+    setNotification('Cut to clipboard');
+  }, [selectedRegion, copySelection]);
+
+  // Paste function - enters paste mode
+  const startPasteMode = useCallback(() => {
+    if (!copiedImageData) return;
+    setIsPastingMode(true);
+    setSelectedRegion(null);
+    setNotification('Click to paste');
+    
+    // Clear overlay
+    const overlayCanvas = overlayCanvasRef.current;
+    if (overlayCanvas) {
+      const overlayCtx = overlayCanvas.getContext('2d');
+      if (overlayCtx) {
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      }
+    }
+  }, [copiedImageData]);
+
+  // Auto-dismiss notification
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modifierKey = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modifierKey && e.key.toLowerCase() === 'c' && selectedRegion) {
+        e.preventDefault();
+        copySelection();
+      } else if (modifierKey && e.key.toLowerCase() === 'x' && selectedRegion) {
+        e.preventDefault();
+        cutSelection();
+      } else if (modifierKey && e.key.toLowerCase() === 'v' && copiedImageData) {
+        e.preventDefault();
+        startPasteMode();
+      } else if (e.key === 'Escape' && isPastingMode) {
+        e.preventDefault();
+        setIsPastingMode(false);
+        setPastePreviewPos(null);
+        const overlayCanvas = overlayCanvasRef.current;
+        if (overlayCanvas) {
+          const overlayCtx = overlayCanvas.getContext('2d');
+          if (overlayCtx) {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedRegion, copiedImageData, isPastingMode, copySelection, cutSelection, startPasteMode]);
+
+  // Update paste preview on mouse move
+  useEffect(() => {
+    if (!isPastingMode || !copiedImageData) return;
+
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!overlayCanvas) return;
+
+    const overlayCtx = overlayCanvas.getContext('2d');
+    if (!overlayCtx || !pastePreviewPos) return;
+
+    // Clear overlay
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    // Draw preview with transparency
+    overlayCtx.globalAlpha = 0.7;
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = copiedImageData.width;
+    tempCanvas.height = copiedImageData.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (tempCtx) {
+      tempCtx.putImageData(copiedImageData, 0, 0);
+      overlayCtx.drawImage(
+        tempCanvas,
+        pastePreviewPos.x - copiedImageData.width / 2,
+        pastePreviewPos.y - copiedImageData.height / 2
+      );
+    }
+    overlayCtx.globalAlpha = 1;
+
+    // Draw border around preview
+    overlayCtx.strokeStyle = '#007bff';
+    overlayCtx.lineWidth = 2;
+    overlayCtx.setLineDash([5, 5]);
+    overlayCtx.strokeRect(
+      pastePreviewPos.x - copiedImageData.width / 2,
+      pastePreviewPos.y - copiedImageData.height / 2,
+      copiedImageData.width,
+      copiedImageData.height
+    );
+    overlayCtx.setLineDash([]);
+  }, [isPastingMode, copiedImageData, pastePreviewPos]);
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -45,11 +211,41 @@ export function App() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    setIsDrawing(true);
-
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    // Handle paste mode
+    if (isPastingMode && copiedImageData) {
+      // Paste the image
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = copiedImageData.width;
+      tempCanvas.height = copiedImageData.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (tempCtx) {
+        tempCtx.putImageData(copiedImageData, 0, 0);
+        ctx.drawImage(
+          tempCanvas,
+          x - copiedImageData.width / 2,
+          y - copiedImageData.height / 2
+        );
+      }
+
+      // Exit paste mode
+      setIsPastingMode(false);
+      setPastePreviewPos(null);
+      setNotification('Pasted successfully');
+      const overlayCanvas = overlayCanvasRef.current;
+      if (overlayCanvas) {
+        const overlayCtx = overlayCanvas.getContext('2d');
+        if (overlayCtx) {
+          overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+      }
+      return;
+    }
+
+    setIsDrawing(true);
 
     if (tool === 'rectangle' || tool === 'oval') {
       setSelectionStart({ x, y });
@@ -61,19 +257,25 @@ export function App() {
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-
     const canvas = canvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
     if (!canvas || !overlayCanvas) return;
 
-    const ctx = canvas.getContext('2d');
-    const overlayCtx = overlayCanvas.getContext('2d');
-    if (!ctx || !overlayCtx) return;
-
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    // Update paste preview position
+    if (isPastingMode) {
+      setPastePreviewPos({ x, y });
+      return;
+    }
+
+    if (!isDrawing) return;
+
+    const ctx = canvas.getContext('2d');
+    const overlayCtx = overlayCanvas.getContext('2d');
+    if (!ctx || !overlayCtx) return;
 
     if (tool === 'rectangle' || tool === 'oval') {
       // Draw selection on overlay canvas
@@ -232,6 +434,50 @@ export function App() {
         </div>
         
         <div className={styles.toolGroup}>
+          <button
+            className={styles.toolButton}
+            onClick={copySelection}
+            disabled={!selectedRegion}
+            title="Copy (Ctrl/Cmd+C)"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="7" y="7" width="9" height="9" rx="1"/>
+              <path d="M4 13V4h9"/>
+            </svg>
+            <span className={styles.toolLabel}>Copy</span>
+          </button>
+          <button
+            className={styles.toolButton}
+            onClick={cutSelection}
+            disabled={!selectedRegion}
+            title="Cut (Ctrl/Cmd+X)"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="6" cy="6" r="2"/>
+              <circle cx="6" cy="14" r="2"/>
+              <line x1="14" y1="4" x2="8" y2="7"/>
+              <line x1="14" y1="16" x2="8" y2="13"/>
+              <line x1="14" y1="4" x2="14" y2="16"/>
+            </svg>
+            <span className={styles.toolLabel}>Cut</span>
+          </button>
+          <button
+            className={`${styles.toolButton} ${isPastingMode ? styles.active : ''}`}
+            onClick={startPasteMode}
+            disabled={!copiedImageData}
+            title="Paste (Ctrl/Cmd+V)"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="6" y="6" width="10" height="12" rx="1"/>
+              <path d="M8 6V4h4v2"/>
+              <line x1="9" y1="11" x2="13" y2="11"/>
+              <line x1="9" y1="14" x2="13" y2="14"/>
+            </svg>
+            <span className={styles.toolLabel}>Paste</span>
+          </button>
+        </div>
+        
+        <div className={styles.toolGroup}>
           <label className={styles.label}>
             Color:
             <input
@@ -281,7 +527,7 @@ export function App() {
       <div className={styles.canvasContainer}>
         <canvas 
           ref={canvasRef} 
-          className={styles.canvas}
+          className={`${styles.canvas} ${isPastingMode ? styles.pasteMode : ''}`}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -289,13 +535,18 @@ export function App() {
         />
         <canvas 
           ref={overlayCanvasRef} 
-          className={styles.overlayCanvas}
+          className={`${styles.overlayCanvas} ${isPastingMode ? styles.pasteMode : ''}`}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
         />
       </div>
+      {notification && (
+        <div className={styles.notification}>
+          {notification}
+        </div>
+      )}
     </div>
   );
 }

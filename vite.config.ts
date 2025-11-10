@@ -7,6 +7,7 @@ import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
 export default defineConfig(() => ({
   root: __dirname,
   cacheDir: './node_modules/.vite/paint-app',
+  base: process.env.NODE_ENV === 'production' ? '/paint-app/' : '/',
   server: {
     port: 4200,
     host: 'localhost',

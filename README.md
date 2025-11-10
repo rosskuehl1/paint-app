@@ -4,6 +4,34 @@
 
 ✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
 
+## 🚀 Live Demo
+
+[View the app on GitHub Pages](https://rosskuehl1.github.io/paint-app/)
+
+## ✨ Features
+
+### Drawing Tools
+- **Pencil**: Precision drawing with adjustable size
+- **Brush**: Smooth, blended strokes with Photoshop-like blending
+- **Eraser**: Remove content with variable size
+- **Rectangle Selection**: Create rectangular selections
+- **Oval Selection**: Create elliptical selections
+
+### Copy & Paste
+- **Copy (Ctrl/Cmd+C)**: Copy selected region to clipboard
+- **Cut (Ctrl/Cmd+X)**: Cut selected region (copy and clear)
+- **Paste (Ctrl/Cmd+V)**: Paste copied content with live preview
+- **Interactive Paste Mode**: See a transparent preview before placing
+- **Visual Feedback**: Toast notifications for all clipboard operations
+
+### How to Use Copy & Paste
+1. Select a region using Rectangle or Oval selection tool
+2. Press **Ctrl/Cmd+C** to copy or **Ctrl/Cmd+X** to cut
+3. Press **Ctrl/Cmd+V** to enter paste mode
+4. Move your mouse to see a preview of where the content will be pasted
+5. Click to place the content, or press **Escape** to cancel
+6. Use the toolbar buttons as an alternative to keyboard shortcuts
+
 [Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/react-standalone-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
 
 ## Run tasks
