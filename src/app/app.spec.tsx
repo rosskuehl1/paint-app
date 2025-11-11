@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
 import App from './app';
@@ -16,23 +15,13 @@ beforeAll(() => {
 
 describe('App', () => {
   it('should render successfully', () => {
-    const { baseElement } = render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    );
+    const { baseElement } = render(<App />);
     expect(baseElement).toBeTruthy();
   });
 
-  it('should render the tip jar button', () => {
-    render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    );
+  it('should render the clear button', () => {
+    render(<App />);
 
-    expect(
-      screen.getByRole('button', { name: /Tip Jar/i })
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Clear/i })).toBeTruthy();
   });
 });
