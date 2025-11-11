@@ -17,13 +17,7 @@
         "cwd": ".",
         "commands": [
           "cp dist/paint-app/index.html dist/paint-app/404.html",
-          "rm -rf dist/root-site",
-          "mkdir -p dist/root-site/paint-app",
-          "cp dist/paint-app/index.html dist/root-site/index.html",
-          "cp dist/paint-app/404.html dist/root-site/404.html",
-          "cp -R dist/paint-app/. dist/root-site/paint-app/",
-          "npx gh-pages -d dist/paint-app --branch gh-pages --dotfiles",
-          "npx gh-pages -d dist/root-site --branch main --repo https://github.com/rosskuehl1/rosskuehl1.github.io.git --dotfiles"
+          "npx gh-pages -d dist/paint-app --branch gh-pages --dotfiles"
         ],
         "parallel": false
       }

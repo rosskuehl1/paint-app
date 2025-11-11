@@ -21,6 +21,7 @@ export function App() {
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [activePointerType, setActivePointerType] = useState<'mouse' | 'touch' | 'pen'>('mouse');
   const [isPointerDown, setIsPointerDown] = useState(false);
+  const [hasCanvasChanges, setHasCanvasChanges] = useState(false);
 
   const toolLabels: Record<Tool, string> = {
     pencil: 'Pencil',
@@ -196,6 +197,7 @@ export function App() {
     // Clear the region (fill with white)
     ctx.fillStyle = 'white';
     ctx.fillRect(normalizedRegion.x, normalizedRegion.y, normalizedRegion.width, normalizedRegion.height);
+  setHasCanvasChanges(true);
 
     // Clear selection
     setSelectedRegion(null);
@@ -280,6 +282,35 @@ export function App() {
   URL.revokeObjectURL(url);
     setNotification('Snapshot downloaded');
   }, []);
+
+  const handleClearCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    if (hasCanvasChanges && typeof window !== 'undefined') {
+      const confirmed = window.confirm('Clear the canvas? This action cannot be undone.');
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    setSelectedRegion(null);
+    setSelectionShape(null);
+    const overlayCanvas = overlayCanvasRef.current;
+    if (overlayCanvas) {
+      const overlayCtx = overlayCanvas.getContext('2d');
+      overlayCtx?.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    }
+    setPastePreviewPos(null);
+    setIsPastingMode(false);
+    setHasCanvasChanges(false);
+    setNotification('Canvas cleared');
+  }, [hasCanvasChanges]);
 
   // Auto-dismiss notification
   useEffect(() => {
@@ -401,6 +432,7 @@ export function App() {
         );
       }
 
+      setHasCanvasChanges(true);
       // Exit paste mode
       setIsPastingMode(false);
       setPastePreviewPos(null);
@@ -515,6 +547,7 @@ export function App() {
 
     ctx.lineTo(x, y);
     ctx.stroke();
+    setHasCanvasChanges(true);
     
     // For brush, start a new path to avoid accumulation
     if (tool === 'brush') {
@@ -768,21 +801,7 @@ export function App() {
           </button>
           <button
             className={styles.toolButton}
-            onClick={() => {
-              const canvas = canvasRef.current;
-              if (!canvas) return;
-              const ctx = canvas.getContext('2d');
-              if (!ctx) return;
-              ctx.fillStyle = 'white';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              setSelectedRegion(null);
-              setSelectionShape(null);
-              const overlayCanvas = overlayCanvasRef.current;
-              if (overlayCanvas) {
-                const overlayCtx = overlayCanvas.getContext('2d');
-                overlayCtx?.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-              }
-            }}
+            onClick={handleClearCanvas}
             title="Clear Canvas"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
