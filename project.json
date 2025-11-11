@@ -2,7 +2,7 @@
   "name": "paint-app",
   "$schema": "node_modules/nx/schemas/project-schema.json",
   "includedScripts": [],
-  "sourceRoot": "./src",
+  "sourceRoot": "paint-app/src",
   "projectType": "application",
   "tags": [],
   "// targets": "to see all targets run: nx show project paint-app --web",
@@ -14,7 +14,7 @@
       ],
       "outputs": [],
       "options": {
-        "cwd": ".",
+        "cwd": "paint-app",
         "commands": [
           "cp dist/paint-app/index.html dist/paint-app/404.html",
           "npx gh-pages -d dist/paint-app --branch gh-pages --dotfiles"
