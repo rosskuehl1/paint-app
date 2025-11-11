@@ -4,9 +4,7 @@ PaintApp is a lightweight drawing playground built with React, Vite, and Nx. It 
 
 ## 🚀 Live Demo
 
-- 👉 [Launch the Paint App](https://rosskuehl1.github.io/paint-app/) (project pages build)
-- 🌐 [Root domain mirror](https://rosskuehl1.github.io) now deploys the same build for easy bookmarking
-- 🎮 [Play DOOM in your browser!](https://rosskuehl1.github.io/paint-app/doom.html) - The classic FPS, now running in-browser with mobile support
+- 👉 [Launch the Paint App](https://rosskuehl1.github.io/paint-app/)
 - Having trouble? Copy the link above into a new tab—GitHub strips inline embeds from README files, so the app must be opened directly.
 
 ## ✨ Features
@@ -106,6 +104,6 @@ Issues and pull requests are welcome! If you plan to tackle a larger feature, pl
 
 If you find PaintApp helpful, consider supporting ongoing development on [PayPal](https://paypal.me/rosskuehl) or directly via Cash App at [`$RossKuehl`](https://cash.app/$RossKuehl).
 
-## �📄 License
+## 📄 License
 
 This project is released under the MIT License.
